@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0a18">
+<meta name="description" content="Bảo vệ HN cùng đại ca Vũ Tuấn Anh - game bắn súng góc nhìn thứ nhất chạy trên trình duyệt, bối cảnh Phố Cổ Hà Nội.">
+<title>Bảo vệ HN cùng đại ca Vũ Tuấn Anh</title>
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="dmgL" class="dmgdir l"></div><div id="dmgR" class="dmgdir r"></div>
+    <div id="dmgT" class="dmgdir t"></div><div id="dmgB" class="dmgdir b"></div>
+    <div id="cross"><i></i><i></i><i></i><i></i></div>
+    <div id="hitmark"></div>
+    <div id="waypoint"><div class="wp-icon"></div><div class="wp-dist">0m</div></div>
+    <div id="topleft">
+      <div id="objective"></div>
+      <div id="objsub"></div>
+    </div>
+    <div id="topright">
+      <canvas id="minimap" width="160" height="160"></canvas>
+      <div id="scoreline"><span id="score">0</span><span id="timer">0:00</span></div>
+    </div>
+    <div id="bossbar" class="hidden"><div class="bn" data-i18n="bossName"></div><div class="bb"><div id="bossfill"></div></div></div>
+    <div id="portalbar" class="hidden"><div class="bn" data-i18n="portal"></div><div class="bb"><div id="portalfill"></div></div></div>
+    <div id="bottomleft">
+      <div id="buff" class="hidden"></div>
+      <div class="hpwrap"><div class="hplabel">HP</div><div class="hpbar"><div id="hpfill"></div></div><div id="hpnum">100</div></div>
+    </div>
+    <div id="bottomright">
+      <div id="weplist"></div>
+      <div id="ammo"><span id="ammoMag">12</span><span id="ammoRes">/ ∞</span></div>
+      <div id="wepname"></div>
+      <div id="reloadhint" class="hidden" data-i18n="reloadHint"></div>
+    </div>
+    <div id="banner"><div class="b1"></div><div class="b2"></div></div>
+    <div id="toasts"></div>
+    <div id="fps" class="hidden"></div>
+    <div id="lockhint" class="hidden" data-i18n="clickToLock"></div>
+  </div>
+
+  <!-- touch controls -->
+  <div id="touch" class="hidden">
+    <div id="tLook"></div>
+    <div id="tStick"><div id="tKnob"></div></div>
+    <button class="tb" id="tFire" data-i18n="tFire"></button>
+    <button class="tb" id="tAim" data-i18n="tAim"></button>
+    <button class="tb" id="tJump" data-i18n="tJump"></button>
+    <button class="tb" id="tReload" data-i18n="tReload"></button>
+    <button class="tb" id="tSwap" data-i18n="tSwap"></button>
+    <button class="tb" id="tPause">II</button>
+  </div>
+
+  <!-- splash -->
+  <div id="splash" class="screen show">
+    <div class="splash-inner">
+      <div class="logo big">%LOGO%</div>
+      <div class="presents" data-i18n="presents"></div>
+      <div class="splash-title">BẢO VỆ HN</div>
+      <div class="splash-sub" data-i18n="titleSub"></div>
+      <div class="splash-credit"><span data-i18n="madeBy"></span> · 2026 · <span data-i18n="contact"></span>: <b class="phone"></b></div>
+      <div class="tap blink" data-i18n="tapToStart"></div>
+    </div>
+  </div>
+
+  <!-- main menu -->
+  <div id="menu" class="screen">
+    <div class="menu-col">
+      <div class="title-block">
+        <div class="logo">%LOGO%</div>
+        <div>
+          <h1>BẢO VỆ HN</h1>
+          <h2 data-i18n="titleSub"></h2>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn primary" data-act="play" data-i18n="play"></button>
+        <button class="btn" data-act="leader" data-i18n="leaderboard"></button>
+        <button class="btn" data-act="settings" data-i18n="settings"></button>
+        <button class="btn" data-act="howto" data-i18n="howto"></button>
+        <button class="btn" data-act="credits" data-i18n="credits"></button>
+      </div>
+      <div class="lang"><button data-lang="vi">Tiếng Việt</button><button data-lang="en">English</button></div>
+      <div class="foot">© 2026 Vũ Tuấn Anh</div>
+    </div>
+  </div>
+
+  <!-- difficulty -->
+  <div id="diff" class="screen">
+    <div class="panel">
+      <h3 data-i18n="chooseDiff"></h3>
+      <div class="cards">
+        <button class="card" data-diff="easy"><b data-i18n="dEasy"></b><span data-i18n="dEasyD"></span></button>
+        <button class="card" data-diff="normal"><b data-i18n="dNormal"></b><span data-i18n="dNormalD"></span></button>
+        <button class="card" data-diff="hard"><b data-i18n="dHard"></b><span data-i18n="dHardD"></span></button>
+      </div>
+      <div class="story" data-i18n="story"></div>
+      <button class="btn small" data-act="back" data-i18n="back"></button>
+    </div>
+  </div>
+
+  <!-- settings -->
+  <div id="settings" class="screen">
+    <div class="panel">
+      <h3 data-i18n="settings"></h3>
+      <div class="rows">
+        <label><span data-i18n="sLang"></span><select id="sLang"><option value="vi">Tiếng Việt</option><option value="en">English</option></select></label>
+        <label><span data-i18n="sQuality"></span><select id="sQuality"><option value="low" data-i18n="qLow"></option><option value="medium" data-i18n="qMed"></option><option value="high" data-i18n="qHigh"></option></select></label>
+        <label><span data-i18n="sSens"></span><input type="range" id="sSens" min="0.2" max="3" step="0.05"><em id="vSens"></em></label>
+        <label><span data-i18n="sTouchSens"></span><input type="range" id="sTouchSens" min="0.2" max="3" step="0.05"><em id="vTouchSens"></em></label>
+        <label><span>FOV</span><input type="range" id="sFov" min="60" max="110" step="1"><em id="vFov"></em></label>
+        <label><span data-i18n="sMusic"></span><input type="range" id="sMusic" min="0" max="1" step="0.05"><em id="vMusic"></em></label>
+        <label><span data-i18n="sSfx"></span><input type="range" id="sSfx" min="0" max="1" step="0.05"><em id="vSfx"></em></label>
+        <label><span data-i18n="sInvert"></span><input type="checkbox" id="sInvert"></label>
+        <label><span data-i18n="sFps"></span><input type="checkbox" id="sFps"></label>
+      </div>
+      <button class="btn small" data-act="back" data-i18n="back"></button>
+    </div>
+  </div>
+
+  <!-- how to -->
+  <div id="howto" class="screen">
+    <div class="panel wide">
+      <h3 data-i18n="howto"></h3>
+      <div class="howgrid">
+        <div><h4 data-i18n="hGoal"></h4><p data-i18n="hGoalT"></p></div>
+        <div><h4 data-i18n="hPC"></h4><p data-i18n="hPCT"></p></div>
+        <div><h4 data-i18n="hTouch"></h4><p data-i18n="hTouchT"></p></div>
+        <div><h4 data-i18n="hPad"></h4><p data-i18n="hPadT"></p></div>
+        <div><h4 data-i18n="hItems"></h4><p data-i18n="hItemsT"></p></div>
+        <div><h4 data-i18n="hFoes"></h4><p data-i18n="hFoesT"></p></div>
+      </div>
+      <button class="btn small" data-act="back" data-i18n="back"></button>
+    </div>
+  </div>
+
+  <!-- leaderboard -->
+  <div id="leader" class="screen">
+    <div class="panel wide">
+      <h3 data-i18n="leaderboard"></h3>
+      <div class="tabs"><button data-lb="easy" data-i18n="dEasy"></button><button data-lb="normal" data-i18n="dNormal"></button><button data-lb="hard" data-i18n="dHard"></button></div>
+      <table id="lbTable"></table>
+      <div class="note" data-i18n="lbNote"></div>
+      <button class="btn small" data-act="back" data-i18n="back"></button>
+    </div>
+  </div>
+
+  <!-- pause -->
+  <div id="pause" class="screen">
+    <div class="panel">
+      <h3 data-i18n="paused"></h3>
+      <div class="btns">
+        <button class="btn primary" data-act="resume" data-i18n="resume"></button>
+        <button class="btn" data-act="settings" data-i18n="settings"></button>
+        <button class="btn" data-act="quit" data-i18n="quit"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- game over -->
+  <div id="over" class="screen">
+    <div class="panel">
+      <h3 id="overTitle"></h3>
+      <div id="overStats" class="stats"></div>
+      <div id="saveRow">
+        <input id="nameIn" maxlength="16" autocomplete="off">
+        <button class="btn small primary" data-act="save" data-i18n="saveScore"></button>
+      </div>
+      <div id="savedMsg" class="note hidden"></div>
+      <div class="btns row">
+        <button class="btn" data-act="again" data-i18n="again"></button>
+        <button class="btn" data-act="menu" data-i18n="toMenu"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- credits -->
+  <div id="credits" class="screen">
+    <div class="roll" id="roll">
+      <div class="logo big">%LOGO%</div>
+      <div class="ct">BẢO VỆ HN</div>
+      <div class="cs" data-i18n="titleSub"></div>
+      <div class="gap"></div>
+      <div class="cr"><span data-i18n="madeBy"></span></div>
+      <div class="cn">Vũ Tuấn Anh</div>
+      <div class="gap"></div>
+      <div class="cr" data-i18n="crIdea"></div><div class="cn">Vũ Tuấn Anh</div>
+      <div class="cr" data-i18n="crSetting"></div><div class="cn" data-i18n="crSettingT"></div>
+      <div class="cr" data-i18n="crTea"></div><div class="cn">Trà Sữa Ông Tuấn Anh<br><small>5 Nguyễn Văn Cừ, Bồ Đề, Hà Nội</small></div>
+      <div class="cr" data-i18n="crTech"></div><div class="cn">three.js (MIT License)<br>Web Audio API · WebGL</div>
+      <div class="cr" data-i18n="crAudio"></div><div class="cn" data-i18n="crAudioT"></div>
+      <div class="gap"></div>
+      <div class="cr" data-i18n="contact"></div><div class="cn phone"></div>
+      <div class="gap"></div>
+      <div class="cn">© 2026 Vũ Tuấn Anh</div>
+      <div class="cs" data-i18n="thanks"></div>
+    </div>
+    <button class="btn small skip" data-act="back" data-i18n="close"></button>
+  </div>
+
+  <div id="rotate" class="hidden"><div data-i18n="rotate"></div></div>
+</div>
+<script>
+/*THREE*/
+</script>
+<script>
+/*GAME*/
+</script>
+</body>
+</html>
