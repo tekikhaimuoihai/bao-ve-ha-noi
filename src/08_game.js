@@ -4,14 +4,13 @@ const DIFFS = {
   normal: { hp: 1, dmg: 0.8, speed: 1, count: 1, regen: 2, regenDelay: 5, mul: 1, projSpeed: 1, bossHp: 1 },
   hard: { hp: 1.3, dmg: 1.2, speed: 1.1, count: 1.35, regen: 0, regenDelay: 99, mul: 1.6, projSpeed: 1.15, bossHp: 1.2 },
 };
-let renderer, post, vmScene, vmCam, moon, hemi, muzzleLight, gunRoot, flashSprite;
-const guns = {};
+let renderer, post, vmScene, vmCam, moon, hemi, muzzleLight, gunRoot;
 
 class Post {
   constructor(r) {
     this.r = r; const hf = r.capabilities.isWebGL2 ? THREE.HalfFloatType : THREE.UnsignedByteType;
     this.rt = new THREE.WebGLRenderTarget(4, 4, { type: hf, depthBuffer: true });
-    this.a = new THREE.WebGLRenderTarget(4, 4, { type: hf, depthBuffer: false }); this.b = this.a.clone();
+    this.a = new THREE.WebGLRenderTarget(4, 4, { type: hf, depthBuffer: false }); this.b = this.a.clone(); this.c = this.a.clone(); this.d = this.a.clone();
     this.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1); this.scene = new THREE.Scene();
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); this.quad.frustumCulled = false; this.scene.add(this.quad);
     const vs = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy,0.0,1.0); }';
@@ -20,28 +19,33 @@ class Post {
     this.blur = new THREE.ShaderMaterial({ uniforms: { t: { value: null }, dir: { value: new THREE.Vector2() } }, vertexShader: vs, depthTest: false, depthWrite: false,
       fragmentShader: 'uniform sampler2D t; uniform vec2 dir; varying vec2 vUv; void main(){ vec3 c = texture2D(t,vUv).rgb*0.227; c += (texture2D(t,vUv+dir*1.38).rgb + texture2D(t,vUv-dir*1.38).rgb)*0.316; c += (texture2D(t,vUv+dir*3.23).rgb + texture2D(t,vUv-dir*3.23).rgb)*0.07; gl_FragColor = vec4(c,1.0); }' });
     this.comp = new THREE.ShaderMaterial({
-      uniforms: { tS: { value: null }, tB: { value: null }, uBloom: { value: 0.9 }, uTime: { value: 0 }, uDmg: { value: 0 }, uLow: { value: 0 }, uExp: { value: 1.25 }, uTea: { value: 0 } },
+      uniforms: { tS: { value: null }, tB: { value: null }, tA: { value: null }, uStreak: { value: 0.0 }, uLetter: { value: 0 }, uFade: { value: 0 }, uAspect: { value: 1.7 }, uBloom: { value: 0.9 }, uTime: { value: 0 }, uDmg: { value: 0 }, uLow: { value: 0 }, uExp: { value: 1.25 }, uTea: { value: 0 } },
       vertexShader: vs, depthTest: false, depthWrite: false,
-      fragmentShader: `uniform sampler2D tS, tB; uniform float uBloom, uTime, uDmg, uLow, uExp, uTea; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tS, tB, tA; uniform float uStreak, uLetter, uFade, uAspect; uniform float uBloom, uTime, uDmg, uLow, uExp, uTea; varying vec2 vUv;
         vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
         float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
         void main(){ vec2 d = vUv-0.5; float ca = 0.0012 + uDmg*0.008;
           vec3 c = vec3(texture2D(tS, vUv+d*ca).r, texture2D(tS, vUv).g, texture2D(tS, vUv-d*ca).b);
-          c += texture2D(tB, vUv).rgb*uBloom; c *= uExp; c = aces(c);
+          c += texture2D(tB, vUv).rgb*uBloom; c += texture2D(tA, vUv).rgb*vec3(0.55,0.7,1.25)*uStreak; c *= uExp; c = aces(c);
+          float lg = dot(c, vec3(0.299,0.587,0.114)); c = mix(c, c*vec3(0.86,1.0,1.12), (1.0-smoothstep(0.0,0.45,lg))*0.55); c = mix(c, c*vec3(1.1,1.0,0.86), smoothstep(0.35,0.9,lg)*0.45);
+          c = mix(vec3(lg), c, 1.1); c = clamp(c, 0.0, 1.0); c = c*c*(3.0-2.0*c)*0.35 + c*0.65;
           float l = dot(c, vec3(0.299,0.587,0.114)); c = mix(c, vec3(l), uLow*0.65);
           c = mix(c, c*vec3(0.92,1.0,1.12), (1.0-l)*0.5);
           float r = length(d); c *= mix(1.0, smoothstep(0.95,0.25,r), 0.55);
           c = mix(c, vec3(0.55,0.0,0.0), uDmg*smoothstep(0.25,0.75,r));
           c = mix(c, c*vec3(0.85,1.15,0.85), uTea*smoothstep(0.35,0.8,r)*0.6);
+          c *= 1.0 - uFade;
           c = pow(c, vec3(1.0/2.2)); c += (hash(vUv*vec2(1920.0,1080.0)+uTime)-0.5)*0.03;
+          float bar = uLetter * 0.09; c *= step(bar, vUv.y) * step(vUv.y, 1.0 - bar);
           gl_FragColor = vec4(c,1.0); }`
     });
     this.useBloom = true;
   }
-  setSize(w, h) { this.rt.setSize(w, h); const bw = Math.max(1, w >> 2), bh = Math.max(1, h >> 2); this.a.setSize(bw, bh); this.b.setSize(bw, bh); this.bw = bw; this.bh = bh; }
+  setSize(w, h) { this.rt.setSize(w, h); const bw = Math.max(1, w >> 2), bh = Math.max(1, h >> 2); this.a.setSize(bw, bh); this.b.setSize(bw, bh); this.c.setSize(bw, bh); this.d.setSize(bw, bh); this.comp.uniforms.uAspect.value = w / h; this.bw = bw; this.bh = bh; }
   pass(mat, target) { this.quad.material = mat; this.r.setRenderTarget(target); this.r.render(this.scene, this.cam); }
   render(scene, cam) {
     const r = this.r;
+    wetRender(r, scene, cam);
     r.setRenderTarget(this.rt); r.clear(); r.render(scene, cam);
     if (vmScene && S.running && S.player && S.player.alive) { r.clearDepth(); r.render(vmScene, vmCam); }
     if (this.useBloom) {
@@ -52,6 +56,16 @@ class Post {
         this.blur.uniforms.t.value = this.b.texture; this.blur.uniforms.dir.value.set(0, s / this.bh); this.pass(this.blur, this.a);
       }
     }
+    if (this.useBloom) {
+      // anamorphic streak: wide horizontal blur of the brightest parts
+      this.bright.uniforms.t.value = this.rt.texture; this.bright.uniforms.th.value = 1.6; this.pass(this.bright, this.c); this.bright.uniforms.th.value = 0.85;
+      for (let i = 0; i < 3; i++) {
+        const s = [3, 9, 24][i];
+        this.blur.uniforms.t.value = this.c.texture; this.blur.uniforms.dir.value.set(s / this.bw, 0); this.pass(this.blur, this.d);
+        const t = this.c; this.c = this.d; this.d = t;
+      }
+    }
+    this.comp.uniforms.tA.value = this.c.texture; this.comp.uniforms.uStreak.value = this.useBloom ? 0.5 : 0;
     this.comp.uniforms.tS.value = this.rt.texture; this.comp.uniforms.tB.value = this.a.texture; this.comp.uniforms.uBloom.value = this.useBloom ? 0.9 : 0;
     this.pass(this.comp, null);
   }
@@ -75,28 +89,26 @@ function initRenderer() {
   for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xffa060, 0, 26, 1.4); l.userData.t = 0; scene.add(l); BLAST_LIGHTS.push(l); }
   const sqL = new THREE.PointLight(0xffb070, 40, 30, 1.3); sqL.position.set(0, 6, 0); scene.add(sqL);
   FX = new Particles(3000, true); SMOKE = new Particles(900, false); scene.add(FX.points); scene.add(SMOKE.points);
-  buildTextures(); buildWorld(scene); makePortals(); makeTracers(scene);
+  buildTextures(); buildWorld(scene); WORLD.cones = buildLampCones(scene, WORLD.lampHeads); makePortals(); makeTracers(scene);
   // viewmodel scene
   vmScene = new THREE.Scene(); vmCam = new THREE.PerspectiveCamera(58, 1, 0.01, 10);
-  vmScene.add(new THREE.HemisphereLight(0xa0a8d8, 0x403028, 2.2)); const vd = new THREE.DirectionalLight(0xffe6c0, 2.2); vd.position.set(1, 2, 1); vmScene.add(vd);
+  vmScene.add(new THREE.HemisphereLight(0xa0a8d8, 0x403028, 1.0)); const vd = new THREE.DirectionalLight(0xffe6c0, 1.8); vd.position.set(1, 2, 1); vmScene.add(vd);
   const vmMuzzle = new THREE.PointLight(0xffb060, 0, 3, 1); vmMuzzle.position.set(0.2, -0.1, -0.6); vmScene.add(vmMuzzle); vmScene.userData.flash = vmMuzzle;
-  gunRoot = new THREE.Group(); vmScene.add(gunRoot);
-  W_ORDER.forEach(id => { const g = buildGunModel(id); g.visible = false; gunRoot.add(g); guns[id] = g; });
-  flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flame, color: new THREE.Color(4, 2.6, 1.2), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-  flashSprite.visible = false; vmScene.add(flashSprite);
+  gunRoot = new THREE.Group(); vmScene.add(gunRoot); vmScene.environment = makeGunEnv(renderer);
+  VIEW = new Viewmodel(gunRoot); makeCasings(scene);
   applyQuality(); onResize();
 }
 function applyQuality() {
   const q = settings.quality, dpr = window.devicePixelRatio || 1;
   renderer.setPixelRatio(q === 'low' ? Math.min(dpr, 1) * 0.7 : q === 'medium' ? Math.min(dpr, 1.25) : Math.min(dpr, 1.75));
-  post.useBloom = q !== 'low';
+  post.useBloom = q !== 'low'; wetSetQuality(q, renderer);
   const sh = q === 'high';
   if (renderer.shadowMap.enabled !== sh) { renderer.shadowMap.enabled = sh; moon.castShadow = sh; S.scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); }
   onResize();
 }
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h, false); const pr = renderer.getPixelRatio(); post.setSize(Math.floor(w * pr), Math.floor(h * pr));
+  renderer.setSize(w, h, false); const pr = renderer.getPixelRatio(); post.setSize(Math.floor(w * pr), Math.floor(h * pr)); wetResize(Math.floor(w * pr), Math.floor(h * pr));
   S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); vmCam.aspect = w / h; vmCam.updateProjectionMatrix();
   const scale = h * pr * 0.5 * S.camera.projectionMatrix.elements[5];
   FX.mat.uniforms.uScale.value = scale; SMOKE.mat.uniforms.uScale.value = scale;
@@ -110,11 +122,11 @@ class Player {
     this.owned = ['pistol', 'shotgun']; this.cur = 'pistol'; this.ammo = {};
     W_ORDER.forEach(id => this.ammo[id] = { mag: WEAPONS[id].mag, res: WEAPONS[id].reserve === Infinity ? Infinity : Math.round(WEAPONS[id].reserve * 0.8) });
     this.fireCd = 0; this.reloadT = 0; this.swapT = 0; this.tea = 0; this.lastHurt = -99; this.aim = 0; this.kick = 0; this.kickV = 0; this.bob = 0; this.stepD = 0; this.spreadHeat = 0; this.dmgFlash = 0; this.deathT = 0;
-    this.sway = { x: 0, y: 0 };
+    this.sway = { x: 0, y: 0 }; this.reloadDur = 1; this.reloadId = 0; this.pumpT = 0; this.sprintAmt = 0;
     this.showGun();
   }
   dmgMul() { return this.tea > 0 ? 1.3 : 1; }
-  showGun() { W_ORDER.forEach(id => guns[id].visible = id === this.cur); }
+  showGun() { VIEW.show(this.cur); }
   damage(d, from) {
     if (!this.alive || S.phase === 4) return;
     d = Math.max(1, d); this.hp -= d; this.lastHurt = S.time; this.dmgFlash = Math.min(1, this.dmgFlash + d / 25); S.shake = Math.max(S.shake, Math.min(0.5, d / 40));
@@ -138,19 +150,40 @@ class Player {
     }
     return false;
   }
-  switchTo(id) { if (!this.owned.includes(id) || id === this.cur) return; this.cur = id; this.swapT = 0.35; this.reloadT = 0; this.showGun(); SND.swap(); }
+  switchTo(id) { if (!this.owned.includes(id) || id === this.cur) return; this.cur = id; this.swapT = 0.35; this.reloadT = 0; this.reloadId++; this.pumpT = 0; this.showGun(); SND.swap(); }
   cycle(dir) { const i = this.owned.indexOf(this.cur); this.switchTo(this.owned[(i + dir + this.owned.length) % this.owned.length]); }
-  reload() { const w = WEAPONS[this.cur], a = this.ammo[this.cur]; if (this.reloadT > 0 || this.swapT > 0 || a.mag >= w.mag || a.res <= 0) return; this.reloadT = w.reload; SND.reload(); }
-  finishReload() { const w = WEAPONS[this.cur], a = this.ammo[this.cur], n = Math.min(w.mag - a.mag, a.res); a.mag += n; if (a.res !== Infinity) a.res -= n; }
+  reload() {
+    const w = WEAPONS[this.cur], a = this.ammo[this.cur]; if (this.reloadT > 0 || this.swapT > 0 || a.mag >= w.mag || a.res <= 0) return;
+    const dur = this.reloadDur = this.cur === 'shotgun' ? 0.5 : w.reload; this.reloadT = dur;
+    const id = ++this.reloadId, cur = this.cur, empty = a.mag === 0;
+    const at = (f, fn) => later(f * dur, () => { if (this.reloadId === id && this.reloadT > 0 && this.cur === cur && S.player === this) fn(); });
+    if (cur === 'rifle') { at(0.14, SND.magOut); at(0.6, SND.magIn); at(0.78, SND.bolt); }
+    else if (cur === 'pistol') { at(0.1, SND.magOut); at(0.52, SND.magIn); if (empty) at(0.8, SND.slide); }
+    else if (cur === 'shotgun') at(0.62, SND.shellIn);
+    else { at(0.3, SND.magOut); at(0.66, SND.magIn); at(0.8, SND.bolt); }
+  }
+  finishReload() {
+    const w = WEAPONS[this.cur], a = this.ammo[this.cur];
+    if (this.cur === 'shotgun') {
+      // one shell at a time; pump once the tube is full (or out of shells)
+      a.mag++; if (a.res !== Infinity) a.res--;
+      if (a.mag < w.mag && a.res > 0) this.reload();
+      else { this.pumpT = 0.5; later(0.12, () => SND.pump()); }
+      return;
+    }
+    const n = Math.min(w.mag - a.mag, a.res); a.mag += n; if (a.res !== Infinity) a.res -= n;
+  }
   fire() {
     const w = WEAPONS[this.cur], a = this.ammo[this.cur];
-    if (this.reloadT > 0 || this.swapT > 0 || this.fireCd > 0) return;
+    // a shotgun reload can be interrupted by firing once a shell is in
+    if (this.reloadT > 0 && this.cur === 'shotgun' && a.mag > 0 && this.fireCd <= 0) { this.reloadT = 0; this.reloadId++; }
+    if (this.reloadT > 0 || this.swapT > 0 || this.fireCd > 0 || this.pumpT > 0.15) return;
     if (a.mag <= 0) { if (a.res > 0) this.reload(); else { SND.empty(); this.fireCd = 0.3; if (S.time - (this.noAmmoT || 0) > 2) { toast(T('tNoAmmo'), '#ff9b7a'); this.noAmmoT = S.time; } } return; }
     a.mag--; this.fireCd = w.rate; S.shots++;
     SND.shot(w.sound);
     const cam = S.camera, o = cam.position.clone(), fwd = V3().set(0, 0, -1).applyQuaternion(cam.quaternion);
     const right = V3().set(1, 0, 0).applyQuaternion(cam.quaternion), up = V3().set(0, 1, 0).applyQuaternion(cam.quaternion);
-    const muzzleW = o.clone().addScaledVector(right, 0.22 * (1 - this.aim)).addScaledVector(up, -0.16).addScaledVector(fwd, 0.7);
+    const muzzleW = VIEW.muzzleWorld();
     const moving = Math.hypot(this.vel.x, this.vel.z) > 1 ? 1 : 0;
     const spread = (w.spread + w.moveSpread * moving + this.spreadHeat * 0.02) * (1 - this.aim * 0.6) * (this.onGround ? 1 : 1.6);
     if (w.rocket) spawnRocket(muzzleW, fwd);
@@ -159,7 +192,7 @@ class Player {
       hitscan(o, d, w.dmg, muzzleW, w.tracer);
     }
     this.kickV += w.kick * (1 - this.aim * 0.4); this.spreadHeat = Math.min(1, this.spreadHeat + (this.cur === 'rifle' ? 0.12 : 0.2));
-    this.gunKick = 1; flashSprite.visible = true; flashSprite.userData.t = 0.05; flashSprite.material.rotation = Math.random() * TAU;
+    VIEW.onFire(this);
     muzzleLight.position.copy(muzzleW); muzzleLight.intensity = 25; vmScene.userData.flash.intensity = 6;
     if (a.mag === 0 && a.res > 0) later(0.25, () => { if (S.player === this && this.ammo[this.cur].mag === 0) this.reload(); });
   }
@@ -175,6 +208,7 @@ class Player {
     // move
     let mx = inp.moveX, mz = inp.moveY; const ml = Math.hypot(mx, mz); if (ml > 1) { mx /= ml; mz /= ml; }
     const sprint = inp.sprint && mz > 0.3 && this.aim < 0.3;
+    this.sprintAmt = lerp(this.sprintAmt, sprint && this.onGround && this.reloadT <= 0 ? 1 : 0, Math.min(1, dt * 8));
     const speed = 6.2 * (sprint ? 1.5 : 1) * (1 - this.aim * 0.4) * (this.tea > 0 ? 1.25 : 1);
     const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
     const wx = (fx * mz + rx * mx) * speed, wz = (fz * mz + rz * mx) * speed, acc = this.onGround ? 12 : 3;
@@ -210,14 +244,7 @@ class Player {
     if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = lerp(cam.fov, fov, Math.min(1, dt * 12)); cam.updateProjectionMatrix(); }
     SND.listener(this.pos.x, this.pos.z, this.yaw);
     // viewmodel
-    const g = guns[this.cur], w = WEAPONS[this.cur];
-    const hip = [0.22, -0.22, -0.5], ads = [0, -0.085 - (this.cur === 'launcher' ? 0.0 : 0), -0.3];
-    const a = this.aim, rl = this.reloadT > 0 ? Math.sin(Math.min(1, (w.reload - this.reloadT) / w.reload) * Math.PI) : 0, sw = this.swapT > 0 ? this.swapT / 0.35 : 0;
-    this.gunKick = Math.max(0, (this.gunKick || 0) - dt * 10);
-    const bob = this.onGround ? 1 : 0.3;
-    gunRoot.position.set(lerp(hip[0], ads[0], a) + bobX * 0.4 * (1 - a) - this.sway.x, lerp(hip[1], ads[1], a) + bobY * 0.3 * bob * (1 - a) - rl * 0.15 - sw * 0.3 + this.sway.y, lerp(hip[2], ads[2], a) + this.gunKick * 0.06);
-    gunRoot.rotation.set(this.gunKick * 0.12 + rl * 0.6 + sw * 0.6, rl * 0.3, rl * 0.4);
-    if (flashSprite.visible) { flashSprite.userData.t -= dt; if (flashSprite.userData.t <= 0) flashSprite.visible = false; const mz = g.userData.muzzle.getWorldPosition(_v); flashSprite.position.copy(mz); flashSprite.scale.setScalar(this.cur === 'shotgun' ? 0.32 : 0.22); }
+    VIEW.update(dt, this, bobX, bobY);
     muzzleLight.intensity = Math.max(0, muzzleLight.intensity - dt * 400); vmScene.userData.flash.intensity = Math.max(0, vmScene.userData.flash.intensity - dt * 100);
   }
 }
@@ -582,7 +609,7 @@ function tick(dt) {
     director(dt);
     for (let i = S.enemies.length - 1; i >= 0; i--) if (S.enemies[i].update(dt)) { S.scene.remove(S.enemies[i].g); S.enemies.splice(i, 1); }
     if (S.boss) S.boss.update(dt);
-    updateShots(dt); updateRockets(dt); updatePickups(dt); updatePortals(dt); updateTracers(dt);
+    updateShots(dt); updateRockets(dt); updatePickups(dt); updatePortals(dt); updateTracers(dt); updateCasings(dt);
     S.shake = Math.max(0, S.shake - dt * 1.6);
     P.applyCamera(dt);
     moon.position.set(P.pos.x - 40, 70, P.pos.z - 60); moon.target.position.set(P.pos.x, 0, P.pos.z);
@@ -590,6 +617,28 @@ function tick(dt) {
     post.comp.uniforms.uDmg.value = Math.min(1, P.dmgFlash); post.comp.uniforms.uLow.value = P.hp < 35 ? (1 - P.hp / 35) : 0; post.comp.uniforms.uTea.value = P.tea > 0 ? Math.min(1, P.tea / 2) : 0;
 }
 let lastT = performance.now(), fpsAcc = 0, fpsN = 0, fpsT = 0;
+// cinematic menu shots: [from, to, look-from, look-to, fov]
+const MENU_SHOTS = [
+  [[0.6, 2.1, 57], [0.2, 2.3, 45], [0, 3.2, 20], [0, 3.6, 0], 62],
+  [[-13, 1.1, 13], [-8, 1.5, 9], [0, 5, 0], [0, 4.5, 0], 58],
+  [[-58, 3.2, -25.5], [-44, 2.6, -26.5], [-20, 4, -26], [-10, 3.4, -26], 55],
+  [[13, 25, 17], [8, 17, 11], [-2, 3, -3], [0, 3, 0], 55],
+  [[-26.5, 1.8, 40], [-25.5, 2.4, 22], [-26, 3.4, 0], [-26, 3, -10], 60],
+];
+let menuShot = 0, menuShotT = 0;
+const MENU_SHOT_LEN = 9;
+function menuCamera(dt, cam) {
+  menuShotT += dt; if (menuShotT > MENU_SHOT_LEN) { menuShotT = 0; menuShot = (menuShot + 1) % MENU_SHOTS.length; }
+  const sh = MENU_SHOTS[menuShot], k = menuShotT / MENU_SHOT_LEN, e = k * k * (3 - 2 * k) * 0.6 + k * 0.4;
+  const L = (a, b) => [lerp(a[0], b[0], e), lerp(a[1], b[1], e), lerp(a[2], b[2], e)];
+  const p = L(sh[0], sh[1]), l = L(sh[2], sh[3]), t = performance.now() / 1000;
+  cam.position.set(p[0] + Math.sin(t * 0.7) * 0.05, p[1] + Math.sin(t * 0.9) * 0.04, p[2]); cam.lookAt(l[0], l[1], l[2]);
+  cam.rotation.z += Math.sin(t * 0.4) * 0.006;
+  if (Math.abs(cam.fov - sh[4]) > 0.1) { cam.fov = sh[4]; cam.updateProjectionMatrix(); }
+  const fade = Math.max(1 - menuShotT / 0.9, 1 - (MENU_SHOT_LEN - menuShotT) / 0.9, 0);
+  post.comp.uniforms.uFade.value = fade * fade;
+  const cap = $('#mCap'); if (cap) { const names = T('shots'); const txt = Array.isArray(names) ? names[menuShot % names.length] : ''; if (cap.textContent !== txt) cap.textContent = txt; cap.parentNode.style.opacity = fade > 0.5 ? 0 : 1; const tm = $('#mTime'); if (tm) tm.textContent = 'REC ' + fmtTime(menuShotT + menuShot * MENU_SHOT_LEN); }
+}
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
@@ -597,14 +646,13 @@ function frame(now) {
   WORLD.sky.uniforms.uTime.value = now / 1000;
   if (S.running && !S.paused) tick(dt);
   if (!S.running) {
-    // menu fly-over
-    const t = now / 1000 * 0.06, cam = S.camera;
-    cam.position.set(Math.cos(t) * 24, 26 + Math.sin(t * 2) * 3, Math.sin(t) * 24); cam.lookAt(0, 2, 0);
-    if (Math.abs(cam.fov - 70) > 0.1) { cam.fov = 70; cam.updateProjectionMatrix(); }
-    S.time += dt; if (!S.player) S.player = { pos: cam.position }; updatePortals(dt);
+    // menu: slow street-level camera shots with fades, letterboxed
+    menuCamera(dt, S.camera);
+    S.time += dt; if (!S.player) S.player = { pos: S.camera.position }; updatePortals(dt);
     post.comp.uniforms.uDmg.value = 0; post.comp.uniforms.uLow.value = 0; post.comp.uniforms.uTea.value = 0;
+    post.comp.uniforms.uLetter.value = Math.min(1, post.comp.uniforms.uLetter.value + dt * 2);
     moon.position.set(-40, 70, -60); moon.target.position.set(0, 0, 0);
-  }
+  } else { post.comp.uniforms.uLetter.value = Math.max(0, post.comp.uniforms.uLetter.value - dt * 3); post.comp.uniforms.uFade.value = 0; }
   FX.update(dt); SMOKE.update(dt);
   for (const l of BLAST_LIGHTS) { if (l.userData.t > 0) { l.userData.t -= dt; l.intensity = 120 * Math.max(0, l.userData.t / 0.35); } else l.intensity = 0; }
   post.comp.uniforms.uTime.value = (now / 1000) % 100;
@@ -616,6 +664,7 @@ function boot() {
   addEventListener('resize', onResize); addEventListener('orientationchange', () => setTimeout(onResize, 200));
   document.addEventListener('visibilitychange', () => { if (document.hidden && S.running && !S.paused) pauseGame(); });
   requestAnimationFrame(frame);
+  window.__menuJump = (n) => { menuShot = n; menuShotT = 4.5; menuCamera(0, S.camera); post.comp.uniforms.uLetter.value = 1; FX.update(0.016); post.render(S.scene, S.camera); };
   window.__game = { S, startGame, settings, tick, mouse, keys, inp, WEAPONS, endGame, render: () => { FX.update(0.016); SMOKE.update(0.016); post.render(S.scene, S.camera); }, spawnEnemy, Boss, applyQuality };
 }
 boot();

@@ -73,23 +73,37 @@
 
   <!-- main menu -->
   <div id="menu" class="screen">
-    <div class="menu-col">
-      <div class="title-block">
-        <div class="logo">%LOGO%</div>
-        <div>
-          <h1>BẢO VỆ HN</h1>
-          <h2 data-i18n="titleSub"></h2>
-        </div>
-      </div>
-      <div class="btns">
+    <div class="m-top">
+      <div class="logo">%LOGO%</div>
+      <div class="m-brand"><b>VŨ TUẤN ANH</b><span>2026</span></div>
+      <div class="m-cap"><span id="mCap"></span><em id="mTime"></em></div>
+    </div>
+    <div class="m-main">
+      <div class="m-kicker" data-i18n="kicker"></div>
+      <h1>BẢO VỆ HN</h1>
+      <h2 data-i18n="titleSub"></h2>
+      <p class="m-tag" data-i18n="tagline"></p>
+      <div class="m-row">
         <button class="btn primary" data-act="play" data-i18n="play"></button>
-        <button class="btn" data-act="leader" data-i18n="leaderboard"></button>
-        <button class="btn" data-act="settings" data-i18n="settings"></button>
-        <button class="btn" data-act="howto" data-i18n="howto"></button>
-        <button class="btn" data-act="credits" data-i18n="credits"></button>
+        <button class="btn ghost" data-act="howto" data-i18n="howto"></button>
+        <button class="btn ghost" data-act="leader" data-i18n="leaderboard"></button>
+        <button class="btn ghost" data-act="settings" data-i18n="settings"></button>
+        <button class="btn ghost" data-act="credits" data-i18n="credits"></button>
       </div>
+      <p class="m-note" data-i18n="menuNote"></p>
       <div class="lang"><button data-lang="vi">Tiếng Việt</button><button data-lang="en">English</button></div>
-      <div class="foot">© 2026 Vũ Tuấn Anh</div>
+    </div>
+    <div class="m-keys">
+      <div class="kg"><span class="kc">W</span><span class="kc">A</span><span class="kc">S</span><span class="kc">D</span><i data-i18n="kMove"></i></div>
+      <div class="kg"><span class="kc wide" data-i18n="kMouse"></span><i data-i18n="kLook"></i></div>
+      <div class="kg"><span class="kc wide" data-i18n="kLmb"></span><i data-i18n="kFire"></i></div>
+      <div class="kg"><span class="kc wide" data-i18n="kRmb"></span><i data-i18n="kAim"></i></div>
+      <div class="kg"><span class="kc">R</span><i data-i18n="kReload"></i></div>
+      <div class="kg"><span class="kc wide">Shift</span><i data-i18n="kSprint"></i></div>
+      <div class="kg"><span class="kc wide">Space</span><i data-i18n="kJump"></i></div>
+      <div class="kg"><span class="kc">1</span><span class="kc">4</span><i data-i18n="kSwap"></i></div>
+      <div class="kg"><span class="kc wide">Esc</span><i data-i18n="kPause"></i></div>
+      <div class="m-touch" data-i18n="kTouch"></div>
     </div>
   </div>
 

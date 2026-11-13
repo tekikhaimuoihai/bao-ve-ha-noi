@@ -1,0 +1,11 @@
+Gun models used in this game (all CC0 1.0, public domain):
+
+- AssaultRifle2_1.glb, Pistol_4.glb, Shotgun_1.glb
+  "Ultimate Gun Pack" by Quaternius - https://quaternius.com/packs/ultimategun.html
+  License: CC0 1.0 Universal
+
+- k_rocketlauncherModern.glb, k_ammo_*.glb
+  "Weapon Pack (1.0)" by Kenney - https://www.kenney.nl
+  License: Creative Commons Zero (CC0)
+
+Materials are restyled in code (src/07b_viewmodel.js). Hands, casings, effects and everything else are procedural.

@@ -53,3 +53,12 @@ python3 build.py
 ## Giấy phép bên thứ ba
 
 three.js: MIT License, Copyright 2010-2023 three.js authors (https://github.com/mrdoob/three.js).
+
+## Mô hình 3D
+
+Mô hình súng dùng giấy phép CC0 (miễn phí, không ràng buộc):
+- Súng lục, súng săn, súng trường: "Ultimate Gun Pack" của Quaternius (quaternius.com).
+- Pháo hoa: "Weapon Pack" của Kenney (kenney.nl).
+
+Chi tiết trong `assets/models/LICENSES.txt`. Tay, vỏ đạn, khói, phố phường và quái đều được dựng bằng code.
+

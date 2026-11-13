@@ -352,7 +352,7 @@ function makePickupModel(type) {
     for (let i = 0; i < 8; i++) mk(MGEO.sph, new THREE.MeshStandardMaterial({ color: 0x1a0f08, roughness: 0.2 }), Math.cos(i) * 0.1, -0.18, Math.sin(i) * 0.1, 0.045, 0.045, 0.045, g);
     mk(MGEO.box, new THREE.MeshStandardMaterial({ color: 0x2f6b2a }), 0, 0.02, 0.19, 0.18, 0.12, 0.01, g);
   } else if (type.startsWith('weapon:')) {
-    const m = buildGunModel(type.split(':')[1]); m.scale.setScalar(1.6); g.add(m);
+    const m = buildGunModel(type.split(':')[1]); m.scale.setScalar(1.5); g.add(m);
   }
   const glowCol = type === 'tea' ? [0.6, 1.6, 0.6] : type === 'health' ? [1.6, 1.1, 0.4] : type === 'ammo' ? [1.4, 1.4, 0.4] : [1.6, 0.8, 2];
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: new THREE.Color(...glowCol), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6 }));

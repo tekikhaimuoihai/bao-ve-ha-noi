@@ -211,10 +211,10 @@ function buildWorld(scene) {
 
   // ground
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(G * CELL, G * CELL), new THREE.MeshStandardMaterial({ map: TEX.asphalt, roughness: 0.85, metalness: 0.05 }));
-  TEX.asphalt.repeat.set(16, 16); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  TEX.asphalt.repeat.set(16, 16); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground); makeWet(ground.material, ground, 1.0);
   const sqW = (SQ1 - SQ0 + 1) * CELL;
   const sq = new THREE.Mesh(new THREE.PlaneGeometry(sqW, sqW), new THREE.MeshStandardMaterial({ map: TEX.paving, roughness: 0.8 }));
-  TEX.paving.repeat.set(4, 4); sq.rotation.x = -Math.PI / 2; sq.position.y = 0.02; sq.receiveShadow = true; scene.add(sq);
+  TEX.paving.repeat.set(4, 4); sq.rotation.x = -Math.PI / 2; sq.position.y = 0.02; sq.receiveShadow = true; scene.add(sq); makeWet(sq.material, sq, 0.75);
 
   // signs
   const planeG = new THREE.PlaneGeometry(1, 1);

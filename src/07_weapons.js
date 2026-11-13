@@ -8,36 +8,6 @@ const WEAPONS = {
 const W_ORDER = ['pistol', 'shotgun', 'rifle', 'launcher'];
 const AMMO_PICK = { shotgun: 12, rifle: 60, launcher: 3 };
 
-function buildGunModel(id) {
-  const g = new THREE.Group();
-  const metal = new THREE.MeshStandardMaterial({ color: 0x5a5f68, metalness: 0.35, roughness: 0.35 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x33363d, metalness: 0.25, roughness: 0.55 });
-  const wood = new THREE.MeshStandardMaterial({ color: 0x7a4a26, roughness: 0.6 });
-  const red = new THREE.MeshStandardMaterial({ color: 0xb3262a, roughness: 0.4, metalness: 0.2 });
-  const gold = new THREE.MeshStandardMaterial({ color: 0xd4a83a, roughness: 0.3, metalness: 0.4 });
-  const B = (m, x, y, z, sx, sy, sz, rx = 0) => { const o = new THREE.Mesh(MGEO.box, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.x = rx; g.add(o); return o; };
-  const C = (m, x, y, z, r, len, segs = 12) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, segs), m); o.rotation.x = Math.PI / 2; o.position.set(x, y, z); g.add(o); return o; };
-  const muzzle = new THREE.Object3D(); g.add(muzzle);
-  if (id === 'pistol') {
-    B(metal, 0, 0.03, -0.08, 0.05, 0.06, 0.24); B(dark, 0, -0.06, 0.0, 0.045, 0.13, 0.06, 0.25); B(dark, 0, -0.005, -0.03, 0.04, 0.02, 0.07);
-    C(dark, 0, 0.035, -0.21, 0.012, 0.03); muzzle.position.set(0, 0.035, -0.23);
-  } else if (id === 'shotgun') {
-    C(metal, 0, 0.03, -0.25, 0.022, 0.6); C(metal, 0, -0.01, -0.2, 0.018, 0.45); B(wood, 0, -0.01, -0.18, 0.06, 0.05, 0.16);
-    B(dark, 0, 0.02, 0.08, 0.07, 0.08, 0.2); B(wood, 0, -0.03, 0.27, 0.06, 0.1, 0.24, -0.15); muzzle.position.set(0, 0.03, -0.56);
-  } else if (id === 'rifle') {
-    B(dark, 0, 0.02, -0.02, 0.06, 0.09, 0.38); C(metal, 0, 0.035, -0.33, 0.014, 0.3); B(metal, 0, 0.09, -0.02, 0.025, 0.03, 0.22);
-    B(dark, 0, -0.08, -0.05, 0.045, 0.14, 0.07, -0.25); B(dark, 0, -0.06, 0.08, 0.04, 0.1, 0.05, 0.3); B(wood, 0, 0.0, 0.26, 0.05, 0.09, 0.2);
-    B(wood, 0, -0.015, -0.2, 0.065, 0.06, 0.16); muzzle.position.set(0, 0.035, -0.49);
-  } else if (id === 'launcher') {
-    C(red, 0, 0.04, -0.12, 0.055, 0.62, 14); C(gold, 0, 0.04, -0.43, 0.062, 0.04, 14); C(gold, 0, 0.04, 0.19, 0.062, 0.04, 14); C(gold, 0, 0.04, -0.12, 0.058, 0.03, 14);
-    B(dark, 0, -0.05, -0.02, 0.04, 0.12, 0.06, 0.25); B(dark, 0, -0.04, -0.2, 0.035, 0.1, 0.05);
-    const star = new THREE.Mesh(new THREE.CircleGeometry(0.03, 5), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 1.6, 0.3) })); star.position.set(0.058, 0.05, -0.12); star.rotation.y = Math.PI / 2; g.add(star);
-    muzzle.position.set(0, 0.04, -0.46);
-  }
-  g.userData.muzzle = muzzle;
-  g.traverse(o => { if (o.isMesh) o.castShadow = false; });
-  return g;
-}
 
 function raySphere(o, d, c, r) {
   const ox = o.x - c.x, oy = o.y - c.y, oz = o.z - c.z;
